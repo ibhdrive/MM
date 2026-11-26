@@ -154,7 +154,7 @@ textarea { min-height: 110px; resize: vertical; line-height: 1.5; }
 .paper h3 { font-size: 16px; text-align: center; text-decoration: underline; margin: 0 0 12px; text-transform: uppercase; }
 .paper h4 { font-size: 15px; margin: 16px 0 6px; text-transform: uppercase; }
 .paper p { margin: 2px 0; }
-.paper ol { margin: 4px 0; padding-left: 22px; }
+.paper ol, .paper ul { margin: 4px 0; padding-left: 22px; }
 .paper .ph { color: #8a8a8a; }
 .paper table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .paper th, .paper td { border: 1px solid #333; padding: 6px 8px; text-align: left; vertical-align: top; }
@@ -289,6 +289,18 @@ textarea { min-height: 110px; resize: vertical; line-height: 1.5; }
         <div class="field"><label for="fTarikh">Tarikh</label><input type="date" id="fTarikh"></div>
         <div class="field"><label for="fMasa">Masa</label><input type="time" id="fMasa"></div>
       </div>
+    </div>
+    <div class="sec noprint">
+      <h2>Ringkasan</h2>
+      <div class="field">
+        <label for="fRingkas">Ringkasan perbincangan (dimasukkan ke dalam minit)</label>
+        <textarea id="fRingkas" placeholder="Satu perkara setiap baris. Jana draf, atau tampal ringkasan daripada Claude."></textarea>
+      </div>
+      <div class="row">
+        <button class="btn" id="sumAuto" type="button">Jana draf ringkasan</button>
+        <button class="btn" id="sumClaude" type="button">Salin arahan untuk Claude</button>
+      </div>
+      <div class="note">Draf automatik memilih ucapan paling penting dan tidak menulis ayat baharu, jadi semak dahulu. Untuk ringkasan yang lebih kemas, tekan <b>Salin arahan untuk Claude</b>, tampal dalam app Claude, kemudian tampal balasannya di kotak ini.</div>
     </div>
     <div class="paper" id="paper"></div>
     <div class="note">Jadual tindakan dan keputusan dijana daripada baris bertag. Ketuk mana-mana sel dalam dokumen untuk menyunting. Untuk bahasa minit yang lebih licin, hantar kepada Claude di langkah seterusnya.</div>
@@ -675,7 +687,51 @@ textarea { min-height: 110px; resize: vertical; line-height: 1.5; }
 
   /* ---------- 04 Dokumen ---------- */
   var F = { fOrg: "org", fUnit: "unit", fBil: "bil", fTempat: "tempat", fTarikh: "tarikh", fMasa: "masa" };
-  function fillForm() { Object.keys(F).forEach(function (id) { $(id).value = S[F[id]] || ""; }); }
+  function fillForm() { Object.keys(F).forEach(function (id) { $(id).value = S[F[id]] || ""; }); $("fRingkas").value = S.ringkasan || ""; }
+  $("fRingkas").addEventListener("input", function () { S.ringkasan = this.value; persist(); renderPaper(); });
+
+  /* Draf ringkasan: pilih ucapan terpenting (bertag, ada angka, lebih panjang) tanpa menulis ayat baharu. */
+  function draftSummary() {
+    var skip = /\b(assalamualaikum|selamat (pagi|petang|tengah hari|malam)|terima kasih|ditangguhkan|bersurai|semakan kehadiran|mulakan mesyuarat)\b/i;
+    var scored = [];
+    S.segs.forEach(function (s, i) {
+      var t = s.text.trim();
+      if (t.length < 25 || skip.test(t)) return;
+      var sc = Math.min(t.length, 160) / 160;
+      if (s.tag === "K") sc += 2; else if (s.tag === "T") sc += 1.5;
+      if (/\d/.test(t)) sc += 0.6;
+      if (/\bRM\s?\d/i.test(t)) sc += 0.6;
+      scored.push({ i: i, sc: sc, t: t });
+    });
+    scored.sort(function (a, b) { return b.sc - a.sc; });
+    return scored.slice(0, 6).sort(function (a, b) { return a.i - b.i; }).map(function (x) { return "- " + x.t.replace(/\s+/g, " "); }).join("\n");
+  }
+  $("sumAuto").addEventListener("click", function () {
+    if (!S.segs.length) { toast("Transkrip masih kosong"); return; }
+    if (S.ringkasan && S.ringkasan.trim() && !confirm_overwrite()) return;
+    var d = draftSummary();
+    if (!d) { toast("Tiada ucapan sesuai untuk diringkaskan"); return; }
+    S.ringkasan = d; $("fRingkas").value = d; persist(); renderPaper(); toast("Draf ringkasan dijana. Semak dan sunting.");
+  });
+  function confirm_overwrite() {
+    var b = $("sumAuto");
+    if (!b._armed) { b._armed = true; b.textContent = "Sahkan ganti ringkasan"; setTimeout(function () { b._armed = false; b.textContent = "Jana draf ringkasan"; }, 3000); return false; }
+    b._armed = false; b.textContent = "Jana draf ringkasan"; return true;
+  }
+  $("sumClaude").addEventListener("click", function () {
+    if (!S.segs.length) { toast("Transkrip masih kosong"); return; }
+    var L = [
+      "Ringkaskan rekod mesyuarat di bawah dalam 4 hingga 6 perkara pendek dalam Bahasa Melayu.",
+      "Mulakan setiap perkara dengan \"- \". Guna hanya maklumat dalam rekod. Betulkan ralat pengecam suara yang jelas.",
+      "Balas senarai itu sahaja, tanpa tajuk atau pengenalan.",
+      "",
+      "Mesyuarat: " + (S.title || "Tidak dinyatakan"),
+      "",
+      "REKOD:"
+    ];
+    S.segs.forEach(function (s) { L.push("[" + hms(s.t) + "] " + s.speaker + ": " + s.text + (s.tag ? " [" + TAG_LABEL[s.tag] + "]" : "")); });
+    copyText(L.join("\n") + "\n", "Disalin. Tampal dalam app Claude, kemudian tampal balasan di sini.");
+  });
   Object.keys(F).forEach(function (id) {
     $(id).addEventListener("input", function () { S[F[id]] = this.value; persist(); renderPaper(); });
   });
@@ -713,6 +769,12 @@ textarea { min-height: 110px; resize: vertical; line-height: 1.5; }
     P.appendChild(el("h4", null, "Kehadiran : " + pr.length + "/" + S.attendees.length));
     var hp = el("p"); hp.textContent = pr.length ? pr.map(function (p) { return p.name + (p.role ? " (" + p.role + ")" : ""); }).join(" · ") : "Tiada peserta direkodkan.";
     P.appendChild(hp);
+
+    P.appendChild(el("h4", null, "Ringkasan perbincangan"));
+    var sl = (S.ringkasan || "").split(/\n+/).map(function (x) { return x.replace(/^\s*(?:[-•*]|\d+[.)])\s*/, "").trim(); }).filter(Boolean);
+    if (!sl.length) P.appendChild(el("p", "ph", "Belum ada ringkasan."));
+    else if (sl.length === 1) P.appendChild(el("p", null, sl[0]));
+    else { var ul = el("ul"); sl.forEach(function (x) { ul.appendChild(el("li", null, x)); }); P.appendChild(ul); }
 
     P.appendChild(el("h4", null, "Perkara baharu · Keputusan"));
     var ks = S.segs.filter(function (s) { return s.tag === "K"; });
@@ -780,6 +842,10 @@ textarea { min-height: 110px; resize: vertical; line-height: 1.5; }
     L.push("Pengerusi: " + (c ? c.name + (c.role ? " (" + c.role + ")" : "") : "-"));
     L.push(""); L.push("KEHADIRAN: " + pr.length + "/" + S.attendees.length);
     pr.forEach(function (p) { L.push("- " + p.name + (p.role ? " (" + p.role + ")" : "")); });
+    L.push(""); L.push("RINGKASAN PERBINCANGAN");
+    var sl = (S.ringkasan || "").split(/\n+/).map(function (x) { return x.replace(/^\s*(?:[-•*]|\d+[.)])\s*/, "").trim(); }).filter(Boolean);
+    if (!sl.length) L.push("(belum ada)");
+    sl.forEach(function (x, i) { L.push((i + 1) + ". " + x); });
     L.push(""); L.push("PERKARA BAHARU · KEPUTUSAN");
     var ks = S.segs.filter(function (s) { return s.tag === "K"; });
     if (!ks.length) L.push("(tiada)");

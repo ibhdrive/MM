@@ -1,5 +1,5 @@
 /* Service worker: simpan fail app supaya boleh dibuka tanpa internet. */
-var CACHE = "minit-v2";
+var CACHE = "minit-v4";
 var FILES = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png"];
 
 self.addEventListener("install", function (e) {

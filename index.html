@@ -96,7 +96,13 @@ textarea { min-height: 110px; resize: vertical; line-height: 1.5; }
 #recBtn.on { box-shadow: 0 0 0 10px color-mix(in srgb, var(--rec) 25%, transparent); }
 .timer { font-family: var(--mono); font-size: 32px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; }
 .status { font-size: 13px; color: var(--muted); margin-top: 6px; }
-.partial { min-height: 24px; font-size: 15px; color: var(--muted); font-style: italic; }
+.livefeed { display: flex; flex-direction: column; gap: 14px; max-height: 300px; overflow-y: auto; padding: 4px 2px; }
+.livefeed .seg { gap: 10px; }
+.livefeed .tx { font-size: 15px; }
+.livefeed .interim { color: var(--muted); font-style: italic; }
+.livefeed .interim .tx::after { content: " ▍"; animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .livefeed .interim .tx::after { animation: none; } }
 .chips { display: flex; gap: 8px; flex-wrap: wrap; }
 .spk { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 5px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .spk[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, var(--bg)); }
@@ -197,7 +203,7 @@ textarea { min-height: 110px; resize: vertical; line-height: 1.5; }
           <div class="status" id="status">Sedia untuk merakam</div>
         </div>
       </div>
-      <div class="partial" id="partial" aria-live="polite"></div>
+      <div class="livefeed" id="liveFeed" aria-live="polite"></div>
       <div class="err" id="err" role="alert" hidden></div>
       <div class="note" id="noSR" hidden>Pelayar ini tidak menyokong pengecaman suara. Gunakan Chrome di Android. Anda masih boleh menampal teks di langkah Transkrip.</div>
       <div class="field">
@@ -414,7 +420,7 @@ textarea { min-height: 110px; resize: vertical; line-height: 1.5; }
     window.scrollTo({ top: 0 });
   }
   function renderView() {
-    if (view === "rakam") { renderPeople(); renderChips(); renderSaved(); }
+    if (view === "rakam") { renderPeople(); renderChips(); renderSaved(); renderLive(); }
     else if (view === "transkrip") renderFeed();
     else if (view === "susun") renderSusun();
     else if (view === "dokumen") { fillForm(); renderPaper(); }
@@ -439,7 +445,34 @@ textarea { min-height: 110px; resize: vertical; line-height: 1.5; }
     b.classList.toggle("on", wanted);
     b.setAttribute("aria-label", wanted ? "Henti rakam" : "Mula rakam");
     $("status").textContent = wanted ? "Sedang merakam. Tekan untuk berhenti" : (elapsed ? "Dihentikan. Tekan untuk sambung" : "Sedia untuk merakam");
-    if (!wanted) $("partial").textContent = "";
+    if (!wanted) setInterim("");
+    else renderLive();
+  }
+
+  /* Transkrip langsung di langkah Rakam: 6 ucapan terakhir dan teks yang sedang dituturkan. */
+  var interimText = "";
+  function setInterim(t) { interimText = t || ""; if (view === "rakam") renderLive(); }
+  function renderLive() {
+    var box = $("liveFeed"); if (!box) return;
+    box.textContent = "";
+    var last = S.segs.slice(-6);
+    if (!last.length && !interimText) {
+      box.appendChild(el("div", "empty", wanted ? "Mendengar… mula bercakap." : "Transkrip muncul di sini secara langsung semasa anda merakam."));
+      return;
+    }
+    function row(name, text, tag, ts, cls) {
+      var r = el("div", "seg" + (tag ? " tag" + tag : "") + (cls ? " " + cls : ""));
+      r.appendChild(avatar(name));
+      var b = el("div", "body"), who = el("div", "who");
+      who.appendChild(el("span", null, name)); who.firstChild.style.fontWeight = "700";
+      if (ts != null) who.appendChild(el("span", "ts", hms(ts)));
+      b.appendChild(who); b.appendChild(el("div", "tx", text));
+      if (tag) b.appendChild(el("span", "pill " + tag, TAG_LABEL[tag]));
+      r.appendChild(b); return r;
+    }
+    last.forEach(function (s) { box.appendChild(row(s.speaker, s.text, s.tag, s.t)); });
+    if (interimText) box.appendChild(row(curSpeaker(), interimText, "", null, "interim"));
+    box.scrollTop = box.scrollHeight;
   }
 
   /* ---------- Peserta dan penutur ---------- */
@@ -488,7 +521,9 @@ textarea { min-height: 110px; resize: vertical; line-height: 1.5; }
     text = (text || "").trim(); if (!text) return null;
     var seg = { id: uid(), t: t == null ? Math.round(totalSec()) : t, speaker: speaker || curSpeaker(), text: text, tag: tag == null ? autoTag(text) : tag };
     S.segs.push(seg); persist();
+    interimText = "";
     if (view === "transkrip") renderFeed(true);
+    else if (view === "rakam") renderLive();
     return seg;
   }
 
@@ -518,7 +553,7 @@ textarea { min-height: 110px; resize: vertical; line-height: 1.5; }
         var r = e.results[i];
         if (r.isFinal) addSeg(r[0].transcript); else interim += r[0].transcript;
       }
-      $("partial").textContent = interim; restarts = 0;
+      setInterim(interim); restarts = 0;
     };
     rec.onerror = function (e) {
       var c = e.error;
@@ -528,7 +563,7 @@ textarea { min-height: 110px; resize: vertical; line-height: 1.5; }
       else if (c === "language-not-supported") { wanted = false; showErr("Bahasa ini tidak disokong pada peranti anda. Cuba English."); }
     };
     rec.onend = function () {
-      setListening(false); $("partial").textContent = "";
+      setListening(false); setInterim("");
       if (wanted && document.visibilityState === "visible") {
         restarts = (Date.now() - lastStart < 800) ? restarts + 1 : 0;
         if (restarts > 6) { wanted = false; showErr("Rakaman terputus berulang kali. Tekan butang untuk cuba lagi."); setLive(); unlockScreen(); return; }

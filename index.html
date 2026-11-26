@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0c1626">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Minit Mesyuarat</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* Susun atur: bungkus gelap bersudut bulat; tab langkah melekat di atas; satu paparan setiap langkah. */
+:root {
+  --bg: #0a1220;
+  --panel: #101c30;
+  --panel2: #16253c;
+  --line: #22344f;
+  --ink: #eaf1fb;
+  --muted: #8da2bd;
+  --accent: #46c28a;
+  --accent-ink: #04231a;
+  --rec: #ff5d4d;
+  --amber: #e3b341;
+  --amber-ink: #2b2100;
+  --font: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --serif: "Times New Roman", "Liberation Serif", Georgia, serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 16px; line-height: 1.5; padding: 12px 12px 48px; }
+.shell { max-width: 640px; margin: 0 auto; background: var(--panel); border: 1px solid var(--line); border-radius: 28px; overflow: clip; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+[hidden] { display: none !important; }
+
+/* Tab langkah */
+.tabs { position: sticky; top: 0; z-index: 4; background: var(--panel); border-bottom: 1px solid var(--line); }
+.tabrow { display: grid; grid-template-columns: repeat(5, 1fr); }
+.tab { background: none; border: 0; color: var(--muted); font: inherit; padding: 14px 2px 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0; }
+.tab .n { font-family: var(--mono); font-size: 12px; opacity: 0.8; }
+.tab .l { font-size: 13px; font-weight: 700; }
+.tab[aria-selected="true"] { color: var(--ink); }
+.bar { height: 3px; background: var(--line); }
+.bar i { display: block; height: 100%; width: 20%; background: var(--accent); transition: width 0.25s; }
+@media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
+
+/* Bar langsung */
+.live { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--line); font-family: var(--mono); font-size: 13px; color: var(--muted); }
+.live .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex: none; }
+.live.on .dot { background: var(--rec); box-shadow: 0 0 0 4px color-mix(in srgb, var(--rec) 25%, transparent); }
+.live .st { font-weight: 700; color: var(--muted); }
+.live.on .st { color: var(--rec); }
+.live .ti { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.live .clk { color: var(--ink); }
+
+.view { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+h2 { margin: 0; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 800; }
+.head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.mono { font-family: var(--mono); }
+.sec { background: var(--panel2); border: 1px solid var(--line); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+label { font-size: 12px; font-weight: 700; color: var(--muted); }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+input[type=text], input[type=date], input[type=time], select, textarea {
+  width: 100%; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-width: 0;
+}
+textarea { min-height: 110px; resize: vertical; line-height: 1.5; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 420px) { .grid2 { grid-template-columns: 1fr; } }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.btn { font: inherit; font-weight: 700; font-size: 15px; border-radius: 12px; padding: 12px 16px; border: 1px solid var(--line); background: var(--panel2); color: var(--ink); cursor: pointer; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.small { padding: 7px 12px; font-size: 13px; border-radius: 10px; }
+.btn.danger { color: var(--rec); }
+.btn.block { width: 100%; }
+.note { font-size: 13px; color: var(--muted); }
+.err { color: var(--rec); font-size: 14px; }
+.empty { color: var(--muted); font-size: 14px; padding: 8px 0; }
+
+/* Perakam */
+.dots { display: flex; justify-content: space-between; padding: 6px 2px; }
+.dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--line); display: block; }
+.rec .dots i { background: var(--accent); animation: bob 1.1s ease-in-out infinite; }
+.rec .dots i:nth-child(3n) { animation-delay: 0.2s; }
+.rec .dots i:nth-child(3n+1) { animation-delay: 0.45s; }
+@keyframes bob { 0%,100% { transform: scaleY(1); opacity: 0.5; } 50% { transform: scaleY(2.6); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .rec .dots i { animation: none; } }
+.recbar { display: flex; align-items: center; gap: 16px; }
+#recBtn { width: 72px; height: 72px; border-radius: 50%; border: 0; cursor: pointer; flex: none; background: var(--rec); color: #fff; display: grid; place-items: center; box-shadow: 0 0 0 6px color-mix(in srgb, var(--rec) 20%, transparent); }
+#recBtn svg { width: 30px; height: 30px; fill: currentColor; }
+#recBtn.on { box-shadow: 0 0 0 10px color-mix(in srgb, var(--rec) 25%, transparent); }
+.timer { font-family: var(--mono); font-size: 32px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; }
+.status { font-size: 13px; color: var(--muted); margin-top: 6px; }
+.partial { min-height: 24px; font-size: 15px; color: var(--muted); font-style: italic; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.spk { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 5px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.spk[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, var(--bg)); }
+.av { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 12px; font-weight: 800; flex: none; }
+.av.big { width: 38px; height: 38px; font-size: 13px; }
+
+/* Peserta */
+.person { display: flex; align-items: center; gap: 10px; }
+.person .nm { flex: 1; min-width: 0; }
+.person .nm b { display: block; font-size: 15px; overflow-wrap: anywhere; }
+.person .nm span { font-size: 12px; color: var(--muted); }
+.person label.chk { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.person input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); }
+
+/* Transkrip */
+.feed { display: flex; flex-direction: column; gap: 18px; }
+.seg { display: flex; gap: 12px; }
+.seg .body { flex: 1; min-width: 0; }
+.seg .who { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.seg .who button { background: none; border: 0; padding: 0; font: inherit; font-weight: 700; color: var(--ink); text-align: left; cursor: pointer; }
+.seg .who .ts { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.seg .tx { margin-top: 2px; overflow-wrap: anywhere; outline: none; border-radius: 6px; }
+.seg .tx:focus { background: var(--bg); box-shadow: 0 0 0 4px var(--bg); }
+.seg.tagT .tx, .seg.tagK .tx { background: color-mix(in srgb, var(--tagc) 20%, var(--panel)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tagc) 20%, var(--panel)); }
+.seg.tagT { --tagc: var(--accent); }
+.seg.tagK { --tagc: var(--amber); }
+.pill { display: inline-block; margin-top: 8px; font: inherit; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; border-radius: 8px; padding: 3px 9px; border: 1px dashed var(--line); background: none; color: var(--muted); cursor: pointer; }
+.pill.T { background: var(--accent); color: var(--accent-ink); border: 0; }
+.pill.K { background: var(--amber); color: var(--amber-ink); border: 0; }
+.segx { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 18px; line-height: 1; padding: 0 4px; align-self: flex-start; }
+
+/* Susun */
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 10px; text-align: center; }
+.stat b { display: block; font-family: var(--mono); font-size: 24px; }
+.stat span { font-size: 11px; font-weight: 800; letter-spacing: 0.06em; color: var(--muted); }
+.stat.T b { color: var(--accent); }
+.stat.K b { color: var(--amber); }
+.li { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-top: 1px solid var(--line); }
+.li:first-child { border-top: 0; }
+.li .t { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 15px; }
+.li .t small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+.scroll { max-height: 320px; overflow-y: auto; }
+
+/* Dokumen */
+.paper { background: #fff; color: #141414; border-radius: 12px; padding: 20px 18px; font-family: var(--serif); font-size: 15px; line-height: 1.55; }
+.paper .org { text-align: center; font-weight: 700; text-transform: uppercase; }
+.paper .rule { border: 0; border-top: 3px double #141414; margin: 10px 0 14px; }
+.paper h3 { font-size: 16px; text-align: center; text-decoration: underline; margin: 0 0 12px; text-transform: uppercase; }
+.paper h4 { font-size: 15px; margin: 16px 0 6px; text-transform: uppercase; }
+.paper p { margin: 2px 0; }
+.paper ol { margin: 4px 0; padding-left: 22px; }
+.paper .ph { color: #8a8a8a; }
+.paper table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.paper th, .paper td { border: 1px solid #333; padding: 6px 8px; text-align: left; vertical-align: top; }
+.paper th { background: #eef0f6; }
+.paper [contenteditable] { outline: none; }
+.paper [contenteditable]:focus { background: #fff8d6; }
+.paper .sign { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 36px; font-size: 14px; }
+.paper .sign div { border-top: 1px solid #333; padding-top: 4px; }
+.tblwrap { overflow-x: auto; }
+
+#toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-size: 14px; font-weight: 700; max-width: calc(100% - 32px); display: none; z-index: 9; }
+
+@media print {
+  body { background: #fff; padding: 0; }
+  body * { visibility: hidden; }
+  .paper, .paper * { visibility: visible; }
+  .paper { position: absolute; left: 0; top: 0; width: 100%; border-radius: 0; padding: 0; }
+  .paper [contenteditable]:focus { background: none; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="tabs" aria-label="Langkah">
+    <div class="tabrow" role="tablist" id="tabrow"></div>
+    <div class="bar"><i id="barFill"></i></div>
+  </nav>
+  <div class="live" id="live">
+    <span class="dot"></span><span class="st" id="liveSt">SEDIA</span>
+    <span class="ti" id="liveTi">Mesyuarat baharu</span>
+    <span class="clk" id="liveClk">00:00:00</span>
+  </div>
+
+  <!-- 01 Rakam -->
+  <main class="view" id="v-rakam">
+    <div class="head"><h2>Rakaman</h2><span class="mono" id="recTimer">00:00:00</span></div>
+
+    <div class="sec rec" id="recSec">
+      <div class="dots" aria-hidden="true"></div>
+      <div class="recbar">
+        <button id="recBtn" type="button" aria-label="Mula rakam">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12h-2Z"/></svg>
+        </button>
+        <div>
+          <div class="timer" id="timer">00:00:00</div>
+          <div class="status" id="status">Sedia untuk merakam</div>
+        </div>
+      </div>
+      <div class="partial" id="partial" aria-live="polite"></div>
+      <div class="err" id="err" role="alert" hidden></div>
+      <div class="note" id="noSR" hidden>Pelayar ini tidak menyokong pengecaman suara. Gunakan Chrome di Android. Anda masih boleh menampal teks di langkah Transkrip.</div>
+      <div class="field">
+        <label>Penutur semasa (ketuk untuk tukar sebelum seseorang bercakap)</label>
+        <div class="chips" id="spkChips"></div>
+      </div>
+      <div class="field">
+        <label for="speechLang">Bahasa pertuturan</label>
+        <select id="speechLang">
+          <option value="ms-MY">Bahasa Melayu</option>
+          <option value="en-US">English</option>
+          <option value="en-GB">English (UK)</option>
+        </select>
+      </div>
+      <div class="note">Kekalkan skrin menyala dan jangan tukar ke app lain semasa merakam. Pengecaman suara memerlukan internet. Enjin suara tidak mengenal siapa bercakap, jadi pilih penutur sendiri.</div>
+    </div>
+
+    <div class="sec">
+      <div class="field">
+        <label for="title">Tajuk mesyuarat</label>
+        <input type="text" id="title" placeholder="Contoh: Mesyuarat Panitia Matematik" autocomplete="off">
+      </div>
+    </div>
+
+    <div class="sec">
+      <h2>Peserta</h2>
+      <div id="people"></div>
+      <div class="grid2">
+        <div class="field"><label for="pName">Nama</label><input type="text" id="pName" placeholder="Pn. Rohana" autocomplete="off"></div>
+        <div class="field"><label for="pRole">Jawatan</label><input type="text" id="pRole" placeholder="Ketua Panitia" autocomplete="off"></div>
+      </div>
+      <button class="btn" id="addPerson" type="button">Tambah peserta</button>
+      <div class="note">Peserta pertama dianggap pengerusi.</div>
+    </div>
+
+    <div class="sec">
+      <h2>Rakaman tersimpan</h2>
+      <div class="empty" id="savedMsg">Belum ada rakaman tersimpan.</div>
+      <div id="savedList"></div>
+      <div class="row">
+        <button class="btn small" id="sampleBtn" type="button">Muat contoh</button>
+        <button class="btn small danger" id="newBtn" type="button">Mesyuarat baharu</button>
+      </div>
+    </div>
+    <button class="btn primary block" type="button" data-go="1">Seterusnya: Transkrip</button>
+  </main>
+
+  <!-- 02 Transkrip -->
+  <section class="view" id="v-transkrip" hidden>
+    <div class="head"><h2>Transkrip</h2><span class="note" id="segCount"></span></div>
+    <div class="note">Ketuk teks untuk membetulkan. Ketuk nama untuk tukar penutur. Ketuk tag untuk tukar antara Tindakan dan Keputusan.</div>
+    <div class="feed" id="feed"></div>
+    <div class="sec">
+      <div class="field">
+        <label for="paste">Tambah teks (taip atau tampal; satu baris satu ucapan)</label>
+        <textarea id="paste" placeholder="Tampal transkrip di sini jika tidak merakam."></textarea>
+      </div>
+      <button class="btn" id="pasteBtn" type="button">Tambah ke transkrip</button>
+    </div>
+    <button class="btn primary block" type="button" data-go="2">Seterusnya: Susun</button>
+  </section>
+
+  <!-- 03 Susun -->
+  <section class="view" id="v-susun" hidden>
+    <div class="head"><h2>Susun</h2></div>
+    <div class="stats" id="stats"></div>
+    <button class="btn block" id="retag" type="button">Tanda automatik semula (baris belum bertag)</button>
+    <div class="sec"><h2>Keputusan</h2><div id="listK"></div></div>
+    <div class="sec"><h2>Tindakan</h2><div id="listT"></div></div>
+    <div class="sec"><h2>Belum bertag</h2><div class="scroll" id="listN"></div></div>
+    <button class="btn primary block" type="button" data-go="3">Seterusnya: Dokumen</button>
+  </section>
+
+  <!-- 04 Dokumen -->
+  <section class="view" id="v-dokumen" hidden>
+    <div class="head"><h2>Dokumen</h2></div>
+    <div class="sec noprint">
+      <div class="grid2">
+        <div class="field"><label for="fOrg">Nama sekolah / organisasi</label><input type="text" id="fOrg" autocomplete="off"></div>
+        <div class="field"><label for="fUnit">Panitia / unit</label><input type="text" id="fUnit" autocomplete="off"></div>
+        <div class="field"><label for="fBil">Bil. mesyuarat</label><input type="text" id="fBil" placeholder="3" autocomplete="off"></div>
+        <div class="field"><label for="fTempat">Tempat</label><input type="text" id="fTempat" autocomplete="off"></div>
+        <div class="field"><label for="fTarikh">Tarikh</label><input type="date" id="fTarikh"></div>
+        <div class="field"><label for="fMasa">Masa</label><input type="time" id="fMasa"></div>
+      </div>
+    </div>
+    <div class="paper" id="paper"></div>
+    <div class="note">Jadual tindakan dan keputusan dijana daripada baris bertag. Ketuk mana-mana sel dalam dokumen untuk menyunting. Untuk bahasa minit yang lebih licin, hantar kepada Claude di langkah seterusnya.</div>
+    <button class="btn primary block" type="button" data-go="4">Seterusnya: Hantar</button>
+  </section>
+
+  <!-- 05 Hantar -->
+  <section class="view" id="v-hantar" hidden>
+    <div class="head"><h2>Hantar</h2></div>
+    <div class="sec">
+      <h2>Minit yang dilicinkan oleh Claude</h2>
+      <div class="field">
+        <label for="minLang">Bahasa minit</label>
+        <select id="minLang"><option value="ms">Bahasa Melayu</option><option value="en">English</option></select>
+      </div>
+      <button class="btn primary block" id="copyBtn" type="button">Salin untuk Claude</button>
+      <button class="btn block" id="shareBtn" type="button" hidden>Kongsi ke app lain</button>
+      <div class="note">Salin, buka app Claude dan tampal. Claude menerima nama penutur, masa dan tag, jadi minit lebih tepat.</div>
+    </div>
+    <div class="sec">
+      <h2>Eksport</h2>
+      <button class="btn block" id="pdfBtn" type="button">Cetak atau simpan sebagai PDF</button>
+      <button class="btn block" id="docCopyBtn" type="button">Salin teks dokumen</button>
+      <button class="btn block" id="txtBtn" type="button">Muat turun .txt</button>
+    </div>
+    <div class="sec">
+      <h2>Simpan</h2>
+      <button class="btn block" id="saveBtn" type="button">Simpan dalam peranti ini</button>
+      <div class="note">Simpanan hanya dalam peranti ini. Jika data Chrome dipadam, ia hilang, jadi eksport yang penting.</div>
+    </div>
+  </section>
+</div>
+<div id="toast" role="status"></div>
+<button class="btn small" id="installBtn" type="button" hidden style="position:fixed; right:16px; bottom:16px; z-index:8">Pasang app</button>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var STORE = "minit.v2", DRAFT = "minit.v2.draft", PREF = "minit.v2.pref";
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var VIEWS = [["rakam", "Rakam"], ["transkrip", "Transkrip"], ["susun", "Susun"], ["dokumen", "Dokumen"], ["hantar", "Hantar"]];
+  var MONTHS = ["Januari", "Februari", "Mac", "April", "Mei", "Jun", "Julai", "Ogos", "September", "Oktober", "November", "Disember"];
+  var DAYS = ["Ahad", "Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu"];
+  var COLORS = ["#4a6fb5", "#8a5bb0", "#2f8f83", "#c0693c", "#b04a6a", "#5b8a3c", "#3f7fb0", "#a07a2a"];
+
+  var S, view = "rakam";
+  var rec = null, wanted = false, listening = false, startedAt = 0, elapsed = 0, timerId = null, clockId = null;
+  var wakeLock = null, restarts = 0, lastStart = 0;
+
+  /* ---------- Alat kecil ---------- */
+  function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+  function toast(msg) { var t = $("toast"); t.textContent = msg; t.style.display = "block"; clearTimeout(toast._t); toast._t = setTimeout(function () { t.style.display = "none"; }, 2600); }
+  function pad(n) { return String(n).padStart(2, "0"); }
+  function hms(sec) { sec = Math.max(0, Math.floor(sec)); return pad(Math.floor(sec / 3600)) + ":" + pad(Math.floor(sec % 3600 / 60)) + ":" + pad(sec % 60); }
+  function load(key, def) { try { var v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch (e) { return def; } }
+  function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); return true; } catch (e) { return false; } }
+  function isoDate(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function hhmm(d) { return pad(d.getHours()) + ":" + pad(d.getMinutes()); }
+  function blank() { return { id: null, title: "", org: "", unit: "", bil: "", tempat: "", tarikh: isoDate(new Date()), masa: "", attendees: [], speaker: "", segs: [], duration: 0 }; }
+  function uid() { return "s" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function totalSec() { return (elapsed + (listening ? Date.now() - startedAt : 0)) / 1000; }
+  function showErr(m) { var e = $("err"); e.textContent = m || ""; e.hidden = !m; }
+
+  var draftT = null;
+  function persist() {
+    clearTimeout(draftT);
+    draftT = setTimeout(function () { S.duration = Math.round(totalSec()); save(DRAFT, S); }, 350);
+  }
+
+  /* ---------- Penutur ---------- */
+  var HON = /^(pn|puan|en|encik|cik|cikgu|dr|dato|datuk|datin|tn|tuan|hajah|haji|ustaz|ustazah|prof)\.?$/i;
+  function initials(name) {
+    var parts = String(name || "?").split(/\s+/).filter(function (p) { return p && !HON.test(p); });
+    if (!parts.length) parts = [String(name || "?")];
+    return ((parts[0][0] || "") + (parts.length > 1 ? parts[1][0] : "")).toUpperCase();
+  }
+  function colorOf(name) { var h = 0; for (var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0; return COLORS[h % COLORS.length]; }
+  function avatar(name, big) { var a = el("div", "av" + (big ? " big" : ""), initials(name)); a.style.background = colorOf(name || "?"); a.setAttribute("aria-hidden", "true"); return a; }
+  function roleOf(name) { var p = S.attendees.filter(function (x) { return x.name === name; })[0]; return p ? p.role : ""; }
+  function curSpeaker() { return S.speaker || (S.attendees[0] && S.attendees[0].name) || "Penutur"; }
+
+  /* ---------- Tag automatik (heuristik ringkas) ---------- */
+  var RE_K = /\b(kita setuju|kami setuju|dipersetujui|bersetuju|setuju|diputuskan|putuskan|keputusan|diluluskan|diluluskan|muktamad|we agree|agreed|decided|resolved)\b/i;
+  var RE_T = /\b(tolong|sila|hendaklah|bertanggungjawab|uruskan|sediakan|hantarkan|semak|maklumkan|maklum balas|selewat-lewatnya|follow up|please|action item|akan (uruskan|sediakan|hantar|semak|maklumkan|siapkan))\b/i;
+  function autoTag(text) { if (RE_K.test(text)) return "K"; if (RE_T.test(text)) return "T"; return ""; }
+  function ownerGuess(seg) {
+    /* Nama peserta yang disebut dalam ayat dianggap pegawai; jika tiada, penutur sendiri. */
+    var best = null, pos = 1e9, text = seg.text.toLowerCase();
+    S.attendees.forEach(function (p) {
+      var parts = p.name.split(/\s+/).filter(function (w) { return w && !HON.test(w); });
+      if (!parts.length) return;
+      var core = parts[0].toLowerCase().replace(/[.,]/g, "");
+      if (core.length < 3) return;
+      var i = text.search(new RegExp("(^|[^a-z])" + core.replace(/[^a-z0-9]/g, "") + "([^a-z]|$)"));
+      if (i >= 0 && i < pos) { pos = i; best = p.name; }
+    });
+    return best || seg.speaker;
+  }
+  function findDate(text) {
+    var m = text.match(/\b(\d{1,2})\s*(jan|feb|mac|apr|mei|jun|jul|ogos|sep|okt|nov|dis)[a-z]*/i);
+    if (m) return m[1] + " " + m[2].charAt(0).toUpperCase() + m[2].slice(1, 3).toLowerCase();
+    m = text.match(/\b(isnin|selasa|rabu|khamis|jumaat|sabtu|ahad)( depan| ini)?\b/i);
+    if (m) return m[0].charAt(0).toUpperCase() + m[0].slice(1);
+    return "";
+  }
+
+  /* ---------- Navigasi ---------- */
+  function buildTabs() {
+    var row = $("tabrow");
+    VIEWS.forEach(function (v, i) {
+      var b = el("button", "tab"); b.type = "button"; b.setAttribute("role", "tab"); b.dataset.v = v[0];
+      b.appendChild(el("span", "n", pad(i + 1)));
+      b.appendChild(el("span", "l", v[1]));
+      b.addEventListener("click", function () { setView(v[0]); });
+      row.appendChild(b);
+    });
+  }
+  function setView(v) {
+    view = v;
+    var idx = 0;
+    VIEWS.forEach(function (x, i) {
+      var on = x[0] === v; if (on) idx = i;
+      $("v-" + x[0]).hidden = !on;
+    });
+    Array.prototype.forEach.call($("tabrow").children, function (b) { b.setAttribute("aria-selected", b.dataset.v === v ? "true" : "false"); });
+    $("barFill").style.width = ((idx + 1) * 20) + "%";
+    renderView();
+    window.scrollTo({ top: 0 });
+  }
+  function renderView() {
+    if (view === "rakam") { renderPeople(); renderChips(); renderSaved(); }
+    else if (view === "transkrip") renderFeed();
+    else if (view === "susun") renderSusun();
+    else if (view === "dokumen") { fillForm(); renderPaper(); }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("[data-go]"), function (b) {
+    b.addEventListener("click", function () { setView(VIEWS[+b.dataset.go][0]); });
+  });
+
+  /* ---------- Bar langsung dan jam ---------- */
+  function tick() {
+    var t = hms(totalSec());
+    $("timer").textContent = t; $("recTimer").textContent = t;
+    $("liveClk").textContent = new Date().toLocaleTimeString("en-GB") + " MYT";
+  }
+  function setLive() {
+    var l = $("live");
+    l.classList.toggle("on", wanted);
+    $("liveSt").textContent = wanted ? "LIVE" : "SEDIA";
+    $("liveTi").textContent = S.title || "Mesyuarat baharu";
+    $("recSec").classList.toggle("rec", wanted);
+    var b = $("recBtn");
+    b.classList.toggle("on", wanted);
+    b.setAttribute("aria-label", wanted ? "Henti rakam" : "Mula rakam");
+    $("status").textContent = wanted ? "Sedang merakam. Tekan untuk berhenti" : (elapsed ? "Dihentikan. Tekan untuk sambung" : "Sedia untuk merakam");
+    if (!wanted) $("partial").textContent = "";
+  }
+
+  /* ---------- Peserta dan penutur ---------- */
+  function renderPeople() {
+    var box = $("people"); box.textContent = "";
+    if (!S.attendees.length) box.appendChild(el("div", "empty", "Belum ada peserta. Tambah nama di bawah supaya transkrip dan dokumen menunjukkan penutur."));
+    S.attendees.forEach(function (p, i) {
+      var r = el("div", "person");
+      r.style.padding = "6px 0";
+      r.appendChild(avatar(p.name, true));
+      var nm = el("div", "nm"); nm.appendChild(el("b", null, p.name)); nm.appendChild(el("span", null, (i === 0 ? "Pengerusi" + (p.role ? " · " : "") : "") + (p.role || "")));
+      r.appendChild(nm);
+      var lab = el("label", "chk"); var cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = p.present !== false;
+      cb.addEventListener("change", function () { p.present = cb.checked; persist(); });
+      lab.appendChild(cb); lab.appendChild(document.createTextNode("Hadir"));
+      r.appendChild(lab);
+      var x = el("button", "segx", "×"); x.type = "button"; x.setAttribute("aria-label", "Buang " + p.name);
+      x.addEventListener("click", function () { S.attendees.splice(i, 1); persist(); renderPeople(); renderChips(); });
+      r.appendChild(x);
+      box.appendChild(r);
+    });
+  }
+  function renderChips() {
+    var box = $("spkChips"); box.textContent = "";
+    if (!S.attendees.length) { box.appendChild(el("div", "note", "Tambah peserta untuk memilih penutur.")); return; }
+    var cur = curSpeaker();
+    S.attendees.forEach(function (p) {
+      var b = el("button", "spk"); b.type = "button"; b.setAttribute("aria-pressed", p.name === cur ? "true" : "false");
+      b.appendChild(avatar(p.name)); b.appendChild(document.createTextNode(p.name));
+      b.addEventListener("click", function () { S.speaker = p.name; persist(); renderChips(); });
+      box.appendChild(b);
+    });
+  }
+  $("addPerson").addEventListener("click", function () {
+    var n = $("pName").value.trim(); if (!n) { toast("Masukkan nama peserta"); return; }
+    S.attendees.push({ name: n, role: $("pRole").value.trim(), present: true });
+    if (!S.speaker) S.speaker = n;
+    $("pName").value = ""; $("pRole").value = "";
+    persist(); renderPeople(); renderChips();
+  });
+  $("title").addEventListener("input", function () { S.title = this.value; persist(); setLive(); });
+  var pref = load(PREF, {});
+
+  /* ---------- Segmen ---------- */
+  function addSeg(text, speaker, t, tag) {
+    text = (text || "").trim(); if (!text) return null;
+    var seg = { id: uid(), t: t == null ? Math.round(totalSec()) : t, speaker: speaker || curSpeaker(), text: text, tag: tag == null ? autoTag(text) : tag };
+    S.segs.push(seg); persist();
+    if (view === "transkrip") renderFeed(true);
+    return seg;
+  }
+
+  /* ---------- Rakaman suara ---------- */
+  function setListening(on) {
+    if (on === listening) return;
+    if (on) { startedAt = Date.now(); } else { elapsed += Date.now() - startedAt; }
+    listening = on; tick();
+  }
+  async function lockScreen() { try { if ("wakeLock" in navigator) wakeLock = await navigator.wakeLock.request("screen"); } catch (e) {} }
+  function unlockScreen() { try { if (wakeLock) wakeLock.release(); } catch (e) {} wakeLock = null; }
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible" && wanted) { lockScreen(); if (!listening) startRec(); }
+  });
+
+  function startRec() {
+    if (!SR) return;
+    rec = new SR();
+    rec.lang = $("speechLang").value;
+    rec.continuous = false;
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+    rec.onstart = function () { setListening(true); lastStart = Date.now(); };
+    rec.onresult = function (e) {
+      var interim = "";
+      for (var i = e.resultIndex; i < e.results.length; i++) {
+        var r = e.results[i];
+        if (r.isFinal) addSeg(r[0].transcript); else interim += r[0].transcript;
+      }
+      $("partial").textContent = interim; restarts = 0;
+    };
+    rec.onerror = function (e) {
+      var c = e.error;
+      if (c === "not-allowed" || c === "service-not-allowed") { wanted = false; showErr("Kebenaran mikrofon ditolak. Benarkan mikrofon untuk laman ini dalam tetapan Chrome."); }
+      else if (c === "network") { wanted = false; showErr("Pengecaman suara memerlukan internet. Semak data atau Wi-Fi."); }
+      else if (c === "audio-capture") { wanted = false; showErr("Mikrofon tidak dijumpai atau sedang digunakan oleh app lain."); }
+      else if (c === "language-not-supported") { wanted = false; showErr("Bahasa ini tidak disokong pada peranti anda. Cuba English."); }
+    };
+    rec.onend = function () {
+      setListening(false); $("partial").textContent = "";
+      if (wanted && document.visibilityState === "visible") {
+        restarts = (Date.now() - lastStart < 800) ? restarts + 1 : 0;
+        if (restarts > 6) { wanted = false; showErr("Rakaman terputus berulang kali. Tekan butang untuk cuba lagi."); setLive(); unlockScreen(); return; }
+        setTimeout(function () { if (wanted) { try { startRec(); } catch (e) {} } }, 200);
+      } else if (!wanted) { setLive(); unlockScreen(); }
+    };
+    try { rec.start(); } catch (e) {}
+  }
+  $("recBtn").addEventListener("click", function () {
+    if (!SR) { $("noSR").hidden = false; return; }
+    showErr("");
+    if (wanted) { wanted = false; setLive(); try { rec.stop(); } catch (e) {} unlockScreen(); persist(); }
+    else {
+      if (!S.masa) S.masa = hhmm(new Date());
+      wanted = true; restarts = 0; setLive(); lockScreen(); startRec();
+    }
+  });
+  if (!SR) $("noSR").hidden = false;
+  if (pref.speechLang) $("speechLang").value = pref.speechLang;
+  $("speechLang").addEventListener("change", function () {
+    pref.speechLang = this.value; save(PREF, pref);
+    if (wanted) { try { rec.abort(); } catch (e) {} }
+  });
+
+  /* ---------- 02 Transkrip ---------- */
+  var NEXT_TAG = { "": "T", "T": "K", "K": "" };
+  var TAG_LABEL = { T: "TINDAKAN", K: "KEPUTUSAN" };
+  function editable(node, onCommit) {
+    node.setAttribute("contenteditable", "plaintext-only");
+    if (node.contentEditable !== "plaintext-only") node.setAttribute("contenteditable", "true");
+    node.addEventListener("blur", function () { onCommit(node.textContent.trim()); });
+  }
+  function renderFeed(stick) {
+    var feed = $("feed"); feed.textContent = "";
+    $("segCount").textContent = S.segs.length ? S.segs.length + " ucapan" : "";
+    if (!S.segs.length) feed.appendChild(el("div", "empty", "Belum ada transkrip. Rakam di langkah 01, atau tampal teks di bawah."));
+    S.segs.forEach(function (seg) {
+      var r = el("div", "seg" + (seg.tag ? " tag" + seg.tag : ""));
+      r.appendChild(avatar(seg.speaker, true));
+      var b = el("div", "body");
+      var who = el("div", "who");
+      var nb = el("button", null, seg.speaker); nb.type = "button"; nb.title = "Ketuk untuk tukar penutur";
+      var rl = roleOf(seg.speaker);
+      nb.addEventListener("click", function () {
+        if (!S.attendees.length) { toast("Tambah peserta di langkah 01"); return; }
+        var names = S.attendees.map(function (p) { return p.name; });
+        seg.speaker = names[(names.indexOf(seg.speaker) + 1) % names.length];
+        persist(); renderFeed();
+      });
+      who.appendChild(nb);
+      if (rl) who.appendChild(el("span", "ts", "· " + rl));
+      who.appendChild(el("span", "ts", hms(seg.t)));
+      b.appendChild(who);
+      var tx = el("div", "tx", seg.text);
+      editable(tx, function (v) { if (!v) { tx.textContent = seg.text; return; } if (v !== seg.text) { seg.text = v; persist(); } });
+      b.appendChild(tx);
+      var pill = el("button", "pill" + (seg.tag ? " " + seg.tag : ""), seg.tag ? TAG_LABEL[seg.tag] : "+ TAG"); pill.type = "button";
+      pill.addEventListener("click", function () { seg.tag = NEXT_TAG[seg.tag || ""]; persist(); renderFeed(); });
+      b.appendChild(pill);
+      r.appendChild(b);
+      var x = el("button", "segx", "×"); x.type = "button"; x.setAttribute("aria-label", "Buang ucapan");
+      x.addEventListener("click", function () { S.segs = S.segs.filter(function (s) { return s !== seg; }); persist(); renderFeed(); });
+      r.appendChild(x);
+      feed.appendChild(r);
+    });
+    if (stick) window.scrollTo({ top: document.body.scrollHeight });
+  }
+  $("pasteBtn").addEventListener("click", function () {
+    var lines = $("paste").value.split(/\n+/).map(function (s) { return s.trim(); }).filter(Boolean);
+    if (!lines.length) { toast("Tiada teks untuk ditambah"); return; }
+    lines.forEach(function (l) { addSeg(l); });
+    $("paste").value = ""; renderFeed(); toast(lines.length + " ucapan ditambah");
+  });
+
+  /* ---------- 03 Susun ---------- */
+  function count(tag) { return S.segs.filter(function (s) { return (s.tag || "") === tag; }).length; }
+  function listBlock(box, tag, emptyMsg, actions) {
+    box.textContent = "";
+    var arr = S.segs.filter(function (s) { return (s.tag || "") === tag; });
+    if (!arr.length) { box.appendChild(el("div", "empty", emptyMsg)); return; }
+    arr.forEach(function (seg) {
+      var li = el("div", "li");
+      li.appendChild(avatar(seg.speaker));
+      var t = el("div", "t", seg.text);
+      t.appendChild(el("small", null, seg.speaker + " · " + hms(seg.t)));
+      li.appendChild(t);
+      actions(seg).forEach(function (a) { li.appendChild(a); });
+      box.appendChild(li);
+    });
+  }
+  function actBtn(label, fn, danger) { var b = el("button", "btn small" + (danger ? " danger" : ""), label); b.type = "button"; b.addEventListener("click", fn); return b; }
+  function renderSusun() {
+    var st = $("stats"); st.textContent = "";
+    [["T", "TINDAKAN", count("T")], ["K", "KEPUTUSAN", count("K")], ["", "LAIN", count("")]].forEach(function (x) {
+      var d = el("div", "stat " + x[0]); d.appendChild(el("b", null, String(x[2]))); d.appendChild(el("span", null, x[1])); st.appendChild(d);
+    });
+    var untag = function (seg) { return [actBtn("Buang tag", function () { seg.tag = ""; persist(); renderSusun(); })]; };
+    listBlock($("listK"), "K", "Belum ada keputusan bertanda.", untag);
+    listBlock($("listT"), "T", "Belum ada tindakan bertanda.", untag);
+    listBlock($("listN"), "", "Semua ucapan sudah bertag.", function (seg) {
+      return [actBtn("Tindakan", function () { seg.tag = "T"; persist(); renderSusun(); }), actBtn("Keputusan", function () { seg.tag = "K"; persist(); renderSusun(); })];
+    });
+  }
+  $("retag").addEventListener("click", function () {
+    var n = 0;
+    S.segs.forEach(function (s) { if (!s.tag) { var t = autoTag(s.text); if (t) { s.tag = t; n++; } } });
+    persist(); renderSusun(); toast(n ? n + " baris ditanda" : "Tiada baris baharu dikesan");
+  });
+
+  /* ---------- 04 Dokumen ---------- */
+  var F = { fOrg: "org", fUnit: "unit", fBil: "bil", fTempat: "tempat", fTarikh: "tarikh", fMasa: "masa" };
+  function fillForm() { Object.keys(F).forEach(function (id) { $(id).value = S[F[id]] || ""; }); }
+  Object.keys(F).forEach(function (id) {
+    $(id).addEventListener("input", function () { S[F[id]] = this.value; persist(); renderPaper(); });
+  });
+  function dateLong(iso) {
+    var p = String(iso || "").split("-"); if (p.length !== 3) return "";
+    var d = new Date(+p[0], +p[1] - 1, +p[2]);
+    return d.getDate() + " " + MONTHS[d.getMonth()] + " " + d.getFullYear() + " (" + DAYS[d.getDay()] + ")";
+  }
+  function timeMy(hm) {
+    var p = String(hm || "").split(":"); if (p.length < 2) return "";
+    var h = +p[0], m = p[1], per = h < 12 ? "pagi" : h === 12 ? "tengah hari" : h < 19 ? "petang" : "malam";
+    var h12 = h % 12 === 0 ? 12 : h % 12;
+    return h12 + "." + m + " " + per;
+  }
+  function chair() { return S.attendees[0] || null; }
+  function present() { return S.attendees.filter(function (p) { return p.present !== false; }); }
+  function year() { return (S.tarikh || "").slice(0, 4) || String(new Date().getFullYear()); }
+
+  function renderPaper() {
+    var P = $("paper"); P.textContent = "";
+    function ph(text, fallback) { var s = el("span", text ? null : "ph", text || fallback); return s; }
+    var org = el("div", "org"); org.appendChild(ph(S.org, "NAMA SEKOLAH / ORGANISASI")); org.appendChild(document.createElement("br")); org.appendChild(ph(S.unit, "PANITIA / UNIT"));
+    P.appendChild(org);
+    P.appendChild(el("hr", "rule"));
+    var h = el("h3"); h.textContent = "Minit Mesyuarat " + (S.unit || "") + " Bil. " + (S.bil || "__") + "/" + year();
+    P.appendChild(h);
+    var line = function (k, v, fb) { var p = el("p"); p.appendChild(document.createTextNode(k + ": ")); p.appendChild(ph(v, fb)); P.appendChild(p); };
+    var tm = timeMy(S.masa);
+    line("Tarikh", dateLong(S.tarikh) + (tm ? " · " + tm : ""), "(belum diisi)");
+    line("Tempat", S.tempat, "(belum diisi)");
+    var c = chair();
+    line("Pengerusi", c ? c.name + (c.role ? " (" + c.role + ")" : "") : "", "(tambah peserta)");
+
+    var pr = present();
+    P.appendChild(el("h4", null, "Kehadiran : " + pr.length + "/" + S.attendees.length));
+    var hp = el("p"); hp.textContent = pr.length ? pr.map(function (p) { return p.name + (p.role ? " (" + p.role + ")" : ""); }).join(" · ") : "Tiada peserta direkodkan.";
+    P.appendChild(hp);
+
+    P.appendChild(el("h4", null, "Perkara baharu · Keputusan"));
+    var ks = S.segs.filter(function (s) { return s.tag === "K"; });
+    if (!ks.length) P.appendChild(el("p", "ph", "Tiada keputusan ditanda."));
+    else {
+      var ol = el("ol");
+      ks.forEach(function (s) { var li = el("li", null, s.text); editable(li, function (v) { if (v && v !== s.text) { s.text = v; persist(); } }); ol.appendChild(li); });
+      P.appendChild(ol);
+    }
+
+    P.appendChild(el("h4", null, "Tindakan"));
+    var ts = S.segs.filter(function (s) { return s.tag === "T"; });
+    if (!ts.length) P.appendChild(el("p", "ph", "Tiada tindakan ditanda."));
+    else {
+      var wrap = el("div", "tblwrap"), tb = el("table");
+      var hr = el("tr"); ["Perkara", "Tindakan", "Tarikh"].forEach(function (x) { hr.appendChild(el("th", null, x)); }); tb.appendChild(hr);
+      ts.forEach(function (s) {
+        var tr = el("tr");
+        var a = el("td", null, s.text); editable(a, function (v) { if (v && v !== s.text) { s.text = v; persist(); } });
+        var b = el("td", null, s.owner != null ? s.owner : ownerGuess(s)); editable(b, function (v) { s.owner = v; persist(); });
+        var d = el("td", null, s.date != null ? s.date : findDate(s.text)); editable(d, function (v) { s.date = v; persist(); });
+        tr.appendChild(a); tr.appendChild(b); tr.appendChild(d); tb.appendChild(tr);
+      });
+      wrap.appendChild(tb); P.appendChild(wrap);
+    }
+    var sg = el("div", "sign"); sg.appendChild(el("div", null, "Disediakan oleh")); sg.appendChild(el("div", null, "Disahkan oleh"));
+    P.appendChild(sg);
+  }
+
+  /* ---------- 05 Hantar ---------- */
+  function today() { var n = new Date(); return n.getDate() + " " + MONTHS[n.getMonth()] + " " + n.getFullYear(); }
+  function claudeText() {
+    var en = $("minLang").value === "en";
+    var head = en ? [
+      "Turn the meeting record below into formal meeting minutes in English.",
+      "Sections: Attendance; Summary; Topics discussed; Decisions; Action items (task, owner, due date); Open items.",
+      "Lines are tagged [ACTION] or [DECISION] by the note-taker; keep those tags unless clearly wrong.",
+      "Use only what the record says. If an owner or date is missing, write \"Not stated\". Quietly fix obvious speech-recognition errors. Speech may mix Bahasa Melayu and English."
+    ] : [
+      "Sila jadikan rekod mesyuarat di bawah sebagai minit mesyuarat rasmi dalam Bahasa Melayu.",
+      "Bahagian: Kehadiran; Ringkasan; Perkara dibincang; Keputusan; Senarai tindakan (perkara, pegawai, tarikh); Perkara tertunggak.",
+      "Baris bertanda [TINDAKAN] atau [KEPUTUSAN] ditanda oleh pencatat; kekalkan kecuali jelas salah.",
+      "Guna hanya maklumat dalam rekod. Jika pegawai atau tarikh tiada, tulis \"Tidak dinyatakan\". Betulkan ralat pengecam suara yang jelas. Pertuturan mungkin bercampur BM dan English."
+    ];
+    var L = head.slice();
+    L.push("");
+    L.push((en ? "Meeting: " : "Mesyuarat: ") + (S.title || (en ? "Not stated" : "Tidak dinyatakan")));
+    L.push((en ? "Organisation: " : "Organisasi: ") + (S.org || "-") + " / " + (S.unit || "-"));
+    L.push((en ? "Date: " : "Tarikh: ") + (dateLong(S.tarikh) || today()) + (S.masa ? " " + timeMy(S.masa) : "") + (S.tempat ? " | " + (en ? "Venue: " : "Tempat: ") + S.tempat : ""));
+    L.push((en ? "Attendees: " : "Peserta: ") + (S.attendees.map(function (p) { return p.name + (p.role ? " (" + p.role + ")" : "") + (p.present === false ? " [absent]" : ""); }).join("; ") || "-"));
+    L.push("");
+    L.push(en ? "RECORD:" : "REKOD:");
+    S.segs.forEach(function (s) {
+      var tag = s.tag ? (" [" + (en ? (s.tag === "T" ? "ACTION" : "DECISION") : TAG_LABEL[s.tag]) + "]") : "";
+      L.push("[" + hms(s.t) + "] " + s.speaker + (roleOf(s.speaker) ? " (" + roleOf(s.speaker) + ")" : "") + ": " + s.text + tag);
+    });
+    return L.join("\n") + "\n";
+  }
+  function docText() {
+    var L = [], c = chair(), pr = present(), tm = timeMy(S.masa);
+    L.push(((S.org || "") + "\n" + (S.unit || "")).trim().toUpperCase());
+    L.push("MINIT MESYUARAT " + (S.unit || "").toUpperCase() + " BIL. " + (S.bil || "__") + "/" + year());
+    L.push("Tarikh: " + (dateLong(S.tarikh) || "-") + (tm ? " · " + tm : ""));
+    L.push("Tempat: " + (S.tempat || "-"));
+    L.push("Pengerusi: " + (c ? c.name + (c.role ? " (" + c.role + ")" : "") : "-"));
+    L.push(""); L.push("KEHADIRAN: " + pr.length + "/" + S.attendees.length);
+    pr.forEach(function (p) { L.push("- " + p.name + (p.role ? " (" + p.role + ")" : "")); });
+    L.push(""); L.push("PERKARA BAHARU · KEPUTUSAN");
+    var ks = S.segs.filter(function (s) { return s.tag === "K"; });
+    if (!ks.length) L.push("(tiada)");
+    ks.forEach(function (s, i) { L.push((i + 1) + ". " + s.text); });
+    L.push(""); L.push("TINDAKAN");
+    var ts = S.segs.filter(function (s) { return s.tag === "T"; });
+    if (!ts.length) L.push("(tiada)");
+    ts.forEach(function (s, i) { L.push((i + 1) + ". " + s.text + " | " + (s.owner != null ? s.owner : ownerGuess(s)) + " | " + (s.date != null ? s.date : findDate(s.text) || "-")); });
+    return L.join("\n").trim() + "\n";
+  }
+  function needSegs() { if (!S.segs.length) { toast("Transkrip masih kosong"); return false; } return true; }
+  function copyText(text, okMsg) {
+    function fb() {
+      var h = document.createElement("textarea"); h.value = text; h.style.cssText = "position:fixed;opacity:0";
+      document.body.appendChild(h); h.select();
+      var ok = false; try { ok = document.execCommand("copy"); } catch (e) {}
+      document.body.removeChild(h); toast(ok ? okMsg : "Salin gagal");
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function () { toast(okMsg); }, fb); else fb();
+  }
+  $("copyBtn").addEventListener("click", function () { if (needSegs()) copyText(claudeText(), "Disalin. Tampal dalam app Claude."); });
+  $("docCopyBtn").addEventListener("click", function () { if (needSegs()) copyText(docText(), "Teks dokumen disalin"); });
+  if (navigator.share) {
+    $("shareBtn").hidden = false;
+    $("shareBtn").addEventListener("click", function () { if (needSegs()) navigator.share({ title: S.title || "Rekod mesyuarat", text: claudeText() }).catch(function () {}); });
+  }
+  $("txtBtn").addEventListener("click", function () {
+    if (!needSegs()) return;
+    var name = (S.title || "minit-mesyuarat").replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-").toLowerCase() || "minit";
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([docText()], { type: "text/plain" })); a.download = name + ".txt";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+  });
+  $("pdfBtn").addEventListener("click", function () {
+    if (!needSegs()) return;
+    setView("dokumen"); setTimeout(function () { window.print(); }, 250);
+  });
+  $("minLang").value = pref.minLang || "ms";
+  $("minLang").addEventListener("change", function () { pref.minLang = this.value; save(PREF, pref); });
+
+  /* ---------- Simpanan ---------- */
+  function renderSaved() {
+    var items = load(STORE, []), box = $("savedList"); box.textContent = "";
+    $("savedMsg").hidden = items.length > 0;
+    items.forEach(function (it) {
+      var row = el("div", "li");
+      var t = el("div", "t", it.title || "Tanpa tajuk");
+      t.appendChild(el("small", null, new Date(it.savedAt).toLocaleString("ms-MY", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) + " · " + (it.segs || []).length + " ucapan"));
+      row.appendChild(t);
+      row.appendChild(actBtn("Buka", function () {
+        if (wanted) { toast("Henti rakaman dahulu"); return; }
+        S = JSON.parse(JSON.stringify(it)); delete S.savedAt; elapsed = (S.duration || 0) * 1000;
+        $("title").value = S.title || ""; persist(); tick(); setLive(); renderView(); toast("Dibuka");
+      }));
+      var del = actBtn("Padam", null, true), armed = false, to = null;
+      del.addEventListener("click", function () {
+        if (!armed) { armed = true; del.textContent = "Sahkan"; to = setTimeout(function () { armed = false; del.textContent = "Padam"; }, 3000); return; }
+        clearTimeout(to); save(STORE, load(STORE, []).filter(function (x) { return x.id !== it.id; })); renderSaved(); toast("Dipadam");
+      });
+      row.appendChild(del);
+      box.appendChild(row);
+    });
+  }
+  $("saveBtn").addEventListener("click", function () {
+    if (!S.segs.length) { toast("Tiada transkrip untuk disimpan"); return; }
+    if (!S.id) S.id = "m" + Date.now();
+    S.duration = Math.round(totalSec());
+    var copy = JSON.parse(JSON.stringify(S)); copy.savedAt = Date.now();
+    var items = load(STORE, []).filter(function (x) { return x.id !== S.id; }); items.unshift(copy);
+    if (!save(STORE, items.slice(0, 50))) { toast("Ruang simpanan peranti penuh"); return; }
+    persist(); toast("Disimpan dalam peranti");
+  });
+  function reset(next) {
+    S = next; elapsed = (S.duration || 0) * 1000; $("title").value = S.title || ""; $("paste").value = "";
+    persist(); tick(); setLive(); renderView();
+  }
+  $("newBtn").addEventListener("click", function () {
+    if (wanted) { toast("Henti rakaman dahulu"); return; }
+    var btn = this;
+    if (!btn._armed) { btn._armed = true; btn.textContent = "Sahkan: kosongkan semua"; setTimeout(function () { btn._armed = false; btn.textContent = "Mesyuarat baharu"; }, 3000); return; }
+    btn._armed = false; btn.textContent = "Mesyuarat baharu";
+    var keep = S.attendees; var n = blank(); n.attendees = keep.map(function (p) { return { name: p.name, role: p.role, present: true }; }); n.speaker = keep[0] ? keep[0].name : "";
+    n.org = S.org; n.unit = S.unit; n.tempat = S.tempat;
+    reset(n); toast("Mesyuarat baharu sedia");
+  });
+  $("sampleBtn").addEventListener("click", function () {
+    if (wanted) { toast("Henti rakaman dahulu"); return; }
+    var n = blank();
+    n.title = "Mesyuarat Panitia Sains"; n.org = "Sekolah Kebangsaan Contoh"; n.unit = "Panitia Sains"; n.bil = "2"; n.tempat = "Bilik Mesyuarat"; n.masa = "14:30";
+    n.attendees = [
+      { name: "Pn. Rohana", role: "Ketua Panitia", present: true },
+      { name: "En. Faizal", role: "Setiausaha", present: true },
+      { name: "Cik Mei Ling", role: "Guru Sains", present: true },
+      { name: "En. Kumar", role: "Guru Sains Tahun 6", present: true }
+    ];
+    n.speaker = "Pn. Rohana";
+    var raw = [
+      [0, "Pn. Rohana", "Assalamualaikum dan selamat petang. Kita mulakan mesyuarat dengan semakan kehadiran."],
+      [412, "En. Faizal", "Pameran Sains dicadangkan pada 9 Disember untuk murid Tahun 4 hingga 6."],
+      [1190, "Pn. Rohana", "Baik, kita setuju pameran Sains diadakan pada 9 Disember di dewan sekolah."],
+      [1675, "Cik Mei Ling", "Bahan eksperimen masih kurang. Setakat ini stok kit hanya cukup untuk dua kelas."],
+      [2210, "Pn. Rohana", "Encik Faizal tolong sediakan senarai cadangan pembelian bahan, hantar sebelum 2 Disember."],
+      [2760, "En. Kumar", "Saya boleh uruskan tempahan dewan dan maklum balas kepada pentadbir Jumaat depan."],
+      [3300, "Pn. Rohana", "Terima kasih semua. Mesyuarat ditangguhkan."]
+    ];
+    raw.forEach(function (r) { n.segs.push({ id: uid(), t: r[0], speaker: r[1], text: r[2], tag: autoTag(r[2]) }); });
+    n.duration = 3300;
+    reset(n); toast("Contoh dimuatkan. Lihat langkah 02 hingga 04.");
+  });
+
+  /* ---------- Pasang app dan luar talian ---------- */
+  var deferred = null;
+  window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); deferred = e; $("installBtn").hidden = false; });
+  $("installBtn").addEventListener("click", function () {
+    if (!deferred) return;
+    deferred.prompt(); deferred.userChoice.finally(function () { deferred = null; $("installBtn").hidden = true; });
+  });
+  window.addEventListener("appinstalled", function () { $("installBtn").hidden = true; });
+  if ("serviceWorker" in navigator) { window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); }); }
+
+  /* ---------- Mula ---------- */
+  S = load(DRAFT, null) || blank();
+  if (!S.segs) S.segs = []; if (!S.attendees) S.attendees = [];
+  elapsed = (S.duration || 0) * 1000;
+  $("title").value = S.title || "";
+  (function dots() { var d = document.querySelector(".dots"); for (var i = 0; i < 44; i++) d.appendChild(document.createElement("i")); })();
+  buildTabs(); setView("rakam"); setLive(); tick();
+  clockId = setInterval(tick, 1000);
+})();
+</script>
+</body>
+</html>
